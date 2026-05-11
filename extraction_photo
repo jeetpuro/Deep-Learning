@@ -1,0 +1,158 @@
+import os
+import cv2
+import sys
+# import testi
+from analyze_video import analyze_videos
+
+def extract_frames_from_videos(directory, train_split, val_split, duration_seconds, frame_interval, subfolder_name):
+    """
+    Extracts frames from videos and splits them into Train and Validation folders.
+
+    Args:
+        directory (str): The path to the directory containing video files.
+        train_split (int): The number of videos to put in the Train folder.
+        val_split (int): The number of videos to put in the Validation folder.
+        duration_seconds (int): The duration in seconds from the start of the video to extract frames from.
+        frame_interval (int): The time interval in seconds between extracted frames.
+        subfolder_name (str): The label/subfolder name (e.g., 'deepfake' or 'original_vids').
+    """
+    video_files = []
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file.endswith(".mp4"):
+                video_files.append(os.path.join(root, file))
+
+    if not video_files:
+        print(f"No .mp4 files found in the directory: {directory}")
+        return
+
+    train_videos = video_files[:train_split]
+    val_videos = video_files[train_split:train_split + val_split]
+
+    print(f"Found {len(video_files)} videos.")
+    print(f"Allocating {len(train_videos)} to Train and {len(val_videos)} to Validation.")
+
+    total_frames_extracted = 0
+
+    def process_split(video_list, split_name):
+        output_folder = os.path.join(split_name, subfolder_name)
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+            print(f"Created directory: {output_folder}")
+
+        split_frames_extracted = 0
+        vid_num = 0
+        print(f"\n--- Processing {split_name} Split ---")
+        
+        for video_path in video_list:
+            try:
+                cap = cv2.VideoCapture(video_path)
+                if not cap.isOpened():
+                    print(f"Error opening video file: {video_path}")
+                    continue
+
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                if fps == 0:
+                    print(f"Could not get FPS for {video_path}. Skipping.")
+                    cap.release()
+                    continue
+                
+                video_filename = os.path.splitext(os.path.basename(video_path))[0]
+                vid_num += 1
+                
+                # Print progress update
+                if vid_num % 50 == 0 or vid_num == len(video_list):
+                    print(f"Processed {vid_num}/{len(video_list)} videos in {split_name}...")
+
+                # Loop through the duration, stepping by the frame interval
+                for sec in range(0, duration_seconds, frame_interval):
+                    frame_id = int(fps * sec)
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id)
+                    
+                    ret, frame = cap.read()
+                    if ret:
+                        # Save the frame as a JPG file with a more precise name
+                        output_filename = f"{video_filename}_sec{sec}.jpg"
+                        output_path = os.path.join(output_folder, output_filename)
+                        cv2.imwrite(output_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                        split_frames_extracted += 1
+                    else:
+                        # Commenting out missing frames note to reduce terminal spam
+                        # print(f"  - Could not read frame at {sec}s for {video_filename}.mp4")
+                        pass
+
+                cap.release()
+            except Exception as e:
+                print(f"Could not process {video_path}: {e}")
+                
+        print(f"{split_name} extraction complete. Frames saved: {split_frames_extracted}")
+        return split_frames_extracted
+
+    if train_videos:
+        total_frames_extracted += process_split(train_videos, "Train")
+    if val_videos:
+        total_frames_extracted += process_split(val_videos, "Validation")
+
+    print(f"\nTotal extraction complete. Grand total frames saved: {total_frames_extracted}")
+
+
+
+if __name__ == "__main__":
+    # --- Action Selection ---
+    print("What would you like to do?")
+    print("1: Analyze video properties (FPS, resolution, etc.)")
+    print("2: Extract frames from videos")
+    
+    action_choice = ""
+    while action_choice not in ["1", "2"]:
+        action_choice = input("Enter your choice (1 or 2): ")
+
+    # --- Directory Selection ---
+    video_directory = "/home/admin1/.cache/kagglehub/datasets/fragdude44/dataset/versions/1"
+    # if len(sys.argv) > 1:
+    #     video_directory = sys.argv[1]
+    #     if not os.path.isdir(video_directory):
+    #         print(f"Error: The provided path '{video_directory}' is not a valid directory.")
+    #         sys.exit(1)
+    # else:
+    #     workspace_dirs = [d for d in os.listdir('.') if os.path.isdir(d) and not d.startswith('.')]
+    #     if workspace_dirs:
+    #         print("\nPlease choose a directory to process:")
+    #         for i, dirname in enumerate(workspace_dirs):
+    #             print(f"{i + 1}: {dirname}")
+            
+    #         try:
+    #             dir_choice = int(input("Enter the number of the directory: ")) - 1
+    #             if 0 <= dir_choice < len(workspace_dirs):
+    #                 video_directory = workspace_dirs[dir_choice]
+    #             else:
+    #                 print("Invalid directory choice.")
+    #                 sys.exit(1)
+    #         except ValueError:
+    #             print("Invalid input. Please enter a number.")
+    #             sys.exit(1)
+    #     else:
+    #         print("No subdirectories found to process.")
+    #         sys.exit(1)
+
+    # --- Execute Action ---
+    print(f"\nSelected directory: {video_directory}")
+    if action_choice == '1':
+        print("Running video analysis...")
+        analyze_videos(video_directory)
+    elif action_choice == '2':
+        subfolder_name = input("Enter the label/subfolder name for these videos (e.g., deepfake or original_vids): ")
+        if not subfolder_name.strip():
+            subfolder_name = 'deepfake'
+            print(f"Using default subfolder: {subfolder_name}")
+            
+        print("Running frame extraction and splitting into Train/Validation...")
+        # Automatically split the requested dataset
+        extract_frames_from_videos(
+            directory=video_directory, 
+            train_split=700, 
+            val_split=300, 
+            duration_seconds=20, 
+            frame_interval=2, 
+            subfolder_name=subfolder_name
+        )

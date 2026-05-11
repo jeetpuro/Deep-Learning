@@ -1,0 +1,20 @@
+# Python / Jupyter
+__pycache__/
+.ipynb_checkpoints/
+
+# Datasets and images
+croped_data/
+data/
+dataset/
+*.jpg
+*.jpeg
+*.png
+*.webp
+.vscode/
+# PyTorch Checkpoints
+checkpoints/
+*.pth
+*.pt
+
+# OS generated files
+.DS_Store
