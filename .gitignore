@@ -11,6 +11,8 @@ dataset/
 *.png
 *.webp
 .vscode/
+/Deep-vs-Real
+
 # PyTorch Checkpoints
 checkpoints/
 *.pth
@@ -18,3 +20,6 @@ checkpoints/
 
 # OS generated files
 .DS_Store
+
+
+
