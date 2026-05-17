@@ -21,5 +21,9 @@ checkpoints/
 # OS generated files
 .DS_Store
 
-
-
+/cropped_faces
+/data_raw
+/frames
+/extra_check
+/.venv
+/__pycache__
