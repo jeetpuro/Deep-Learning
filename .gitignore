@@ -27,3 +27,7 @@ checkpoints/
 /extra_check
 /.venv
 /__pycache__
+diff_history.json
+base_history.json
+.gitignore
+sp_history.json
